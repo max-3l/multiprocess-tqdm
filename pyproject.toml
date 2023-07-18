@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multiprocess-tqdm"
+version = "0.0.1"
+description = "Track progress over in concurrent and parallel workloads."
+readme = "README.md"
+authors = [{ name = "Maximilian Schulze", email = "49536186+max-3l@users.noreply.github.com" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["progress", "multithreading", "multiprocessing"]
+dependencies = ["tqdm~=4"]
+requires-python = ">=3.9"
+
+[project.urls]
+Homepage = "https://github.com/max-3l/multiprocess-tqdm"
+Bugtracker = "https://github.com/max-3l/multiprocess-tqdm/issues"
