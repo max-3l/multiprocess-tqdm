@@ -53,27 +53,28 @@ class MPBar:
         self.queue.put(PostfixMessage(postfix))
 
 class MPtqdm:
-    def __init__(self, description: str = "", total: Optional[int] = None, leave: Optional[bool] = True):
+    def __init__(self, description: str = "", total: Optional[int] = None, leave: Optional[bool] = True, postfix: Optional[dict] = None):
         self.manager = Manager()
-        self.queue = Queue()
+        self.queue = self.manager.Queue()
         self.description = description
         self.total = total
         self.leave = leave
-        self.bar = tqdm(disable=True, description=description, total=total, leave=leave)
+        self.postfix = postfix
         self.thread = Thread(target=self.run)
     
     def run(self):
-        self.bar.disable = False
-        self.bar.refresh()
+        bar = tqdm(desc=self.description, total=self.total, leave=self.leave, postfix=self.postfix)
         while True:
             msg = self.queue.get()
             if isinstance(msg, UpdateMessage):
-                self.bar.update(msg.value)
-            if isinstance(msg, StopMessage):
+                bar.update(msg.value)
+            elif isinstance(msg, PostfixMessage):
+                bar.set_postfix(msg.value)
+            elif isinstance(msg, StopMessage):
                 break
 
-    def __enter__(self) -> None:
-        self.thread.run()
+    def __enter__(self) -> MPBar:
+        self.thread.start()
         return MPBar(self.queue)
 
     def __exit__(self, *args, **kwargs) -> None:
