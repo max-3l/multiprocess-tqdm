@@ -31,7 +31,7 @@ def main():
         num_iterations = 100
         # Create the progress bar within the pool context.
         with MPtqdm(description="Bars done", total=1, leave=True) as bar:
-            # We can easily nest multiple burs.
+            # We can easily nest multiple progress bars.
             # However, keep in mind that one thread per progress bar is created.
             with MPtqdm(description="Sleep Iteration", total=num_iterations, leave=False) as bar2:
                 # Pass the context object to the processes so that they can update the progress bar
