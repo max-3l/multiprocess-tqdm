@@ -25,6 +25,16 @@ class PostfixMessage(Message):
         self.key = "POSTFIX"
         self.value = postfix
 
+class NewTotalMessage(Message):
+    def __init__(self, new_total: int):
+        self.key = "NEW_TOTAL"
+        self.value = new_total
+
+class AddTotalMessage(Message):
+    def __init__(self, add_total: int):
+        self.key = "ADD_TOTAL"
+        self.value = add_total
+
 class MPBar:
     """A progress bar client that communicates with a multiprocess progress bar
     to track process over multiple processes.
@@ -35,6 +45,12 @@ class MPBar:
             queue (Queue): The communcation queue to the progress bar.
         """
         self.queue = queue
+    
+    def update_total(self, new_total: int):
+        self.queue.put(NewTotalMessage(new_total))
+    
+    def add_total(self, add_total: int):
+        self.queue.put(AddTotalMessage(add_total))
 
     def update(self, update_by=1):
         """Update the progress bar.
@@ -86,6 +102,12 @@ class MPtqdm:
                 bar.update(msg.value)
             elif isinstance(msg, PostfixMessage):
                 bar.set_postfix(msg.value)
+            elif isinstance(msg, NewTotalMessage):
+                bar.total = msg.value
+                bar.refresh()
+            elif isinstance(msg, AddTotalMessage):
+                bar.total += msg.value
+                bar.refresh()
             elif isinstance(msg, StopMessage):
                 break
 
