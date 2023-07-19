@@ -1,6 +1,7 @@
-from multiprocessing import Manager, Queue
+from multiprocessing import Manager, Queue, Pool
 from threading import Thread
-from typing import Optional, Union
+from typing import Optional, Union, List, Any, Iterable
+from itertools import repeat
 
 from tqdm import tqdm
 
@@ -52,6 +53,11 @@ class MPBar:
         """
         self.queue.put(PostfixMessage(postfix))
 
+    def run_and_update(self, call: callable, arg: Any) -> Any:
+        result = call(arg)
+        self.update(1)
+        return result
+
 class MPtqdm:
     def __init__(self, description: str = "", total: Optional[int] = None, leave: Optional[bool] = True, postfix: Optional[dict] = None):
         self.manager = Manager()
@@ -61,7 +67,17 @@ class MPtqdm:
         self.leave = leave
         self.postfix = postfix
         self.thread = Thread(target=self.run)
-    
+
+    @staticmethod
+    def map(pool: Pool, call: callable, args: Iterable[Any], description: str = "", total: Optional[int] = None, leave: Optional[bool] = True, postfix: Optional[dict] = None) -> List[Any]:
+        try:
+            total = len(args)
+        except:
+            pass
+        manager = MPtqdm(description=description, total=total, postfix=postfix, leave=leave)
+        with manager as pbar:
+            pool.starmap(pbar.run_and_update, zip(repeat(call), args))
+
     def run(self):
         bar = tqdm(desc=self.description, total=self.total, leave=self.leave, postfix=self.postfix)
         while True:
