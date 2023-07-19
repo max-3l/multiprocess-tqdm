@@ -76,7 +76,7 @@ class MPtqdm:
             pass
         manager = MPtqdm(description=description, total=total, postfix=postfix, leave=leave)
         with manager as pbar:
-            pool.starmap(pbar.run_and_update, zip(repeat(call), args))
+            return pool.starmap(pbar.run_and_update, zip(repeat(call), args))
 
     def run(self):
         bar = tqdm(desc=self.description, total=self.total, leave=self.leave, postfix=self.postfix)
