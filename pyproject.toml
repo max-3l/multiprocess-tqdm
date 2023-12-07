@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "multiprocess-tqdm"
-version = "0.0.3"
+version = "0.0.4"
 description = "Track progress over in concurrent and parallel workloads."
 readme = "README.md"
 authors = [{ name = "Maximilian Schulze", email = "49536186+max-3l@users.noreply.github.com" }]
