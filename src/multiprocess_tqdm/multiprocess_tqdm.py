@@ -1,9 +1,12 @@
-from multiprocessing import Manager, Queue, Pool
-from threading import Thread
-from typing import Optional, Union, List, Any, Iterable, Tuple
+import logging
+from contextlib import contextmanager
 from itertools import repeat
+from multiprocessing import Manager, Pool, Queue
+from threading import Thread
+from typing import Any, Iterable, List, Optional, Tuple, Union
 
 from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 
 class Message:
@@ -34,6 +37,39 @@ class AddTotalMessage(Message):
     def __init__(self, add_total: int):
         self.key = "ADD_TOTAL"
         self.value = add_total
+
+class WriteMessage(Message):
+    def __init__(self, write: str):
+        self.key = "WRITE"
+        self.value = write
+
+class MPLoggingHandler(logging.Handler):
+    def __init__(self, queue: Queue):
+        super().__init__()
+        self.queue = queue
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.queue.put(WriteMessage(self.format(record)))
+
+@contextmanager
+def override_logging_stream_handler(queue: Queue, logger: Optional[Iterable[logging.Logger]] = None):
+    if logger is None:
+        logger = [logging.root]
+    original_handler = [[handler for handler in log.handlers] for log in logger]
+    try:
+        for log in logger:
+            filtered_handlers = list(filter(lambda handler: not isinstance(handler, logging.StreamHandler), log.handlers))
+            removed_handler = next(filter(lambda handler: isinstance(handler, logging.StreamHandler), log.handlers))
+            new_handler = MPLoggingHandler(queue)
+            new_handler.setFormatter(removed_handler.formatter)
+            new_handler.setLevel(removed_handler.level)
+            new_handlers = [new_handler] + filtered_handlers
+            log.handlers = new_handlers
+        yield
+    finally:
+        for log, handlers in zip(logger, original_handler):
+            log.handlers = handlers
+
 
 class MPBar:
     """A progress bar client that communicates with a multiprocess progress bar
@@ -70,7 +106,8 @@ class MPBar:
         self.queue.put(PostfixMessage(postfix))
 
     def run_and_update(self, call: callable, args: Tuple[Any]) -> Any:
-        result = call(*args)
+        with override_logging_stream_handler(self.queue):
+            result = call(*args)
         self.update(1)
         return result
 
@@ -89,7 +126,7 @@ class MPtqdm:
         return MPtqdm.starmap(
             pool=pool,
             call=call,
-            args=((arg,) for arg in args),
+            args=[(arg,) for arg in args],
             description=description,
             total=total,
             leave=leave,
@@ -104,7 +141,8 @@ class MPtqdm:
             pass
         manager = MPtqdm(description=description, total=total, postfix=postfix, leave=leave)
         with manager as pbar:
-            return pool.starmap(pbar.run_and_update, zip(repeat(call), args))
+            with logging_redirect_tqdm():
+                return pool.starmap(pbar.run_and_update, zip(repeat(call), args))
 
     def run(self):
         bar = tqdm(desc=self.description, total=self.total, leave=self.leave, postfix=self.postfix)
@@ -120,6 +158,8 @@ class MPtqdm:
             elif isinstance(msg, AddTotalMessage):
                 bar.total += msg.value
                 bar.refresh()
+            elif isinstance(msg, WriteMessage):
+                bar.write(msg.value)
             elif isinstance(msg, StopMessage):
                 break
 
