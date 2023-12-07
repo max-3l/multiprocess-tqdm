@@ -1,6 +1,6 @@
 from multiprocessing import Manager, Queue, Pool
 from threading import Thread
-from typing import Optional, Union, List, Any, Iterable
+from typing import Optional, Union, List, Any, Iterable, Tuple
 from itertools import repeat
 
 from tqdm import tqdm
@@ -69,8 +69,8 @@ class MPBar:
         """
         self.queue.put(PostfixMessage(postfix))
 
-    def run_and_update(self, call: callable, arg: Any) -> Any:
-        result = call(arg)
+    def run_and_update(self, call: callable, args: Tuple[Any]) -> Any:
+        result = call(*args)
         self.update(1)
         return result
 
@@ -86,6 +86,18 @@ class MPtqdm:
 
     @staticmethod
     def map(pool: Pool, call: callable, args: Iterable[Any], description: str = "", total: Optional[int] = None, leave: Optional[bool] = True, postfix: Optional[dict] = None) -> List[Any]:
+        return MPtqdm.starmap(
+            pool=pool,
+            call=call,
+            args=((arg,) for arg in args),
+            description=description,
+            total=total,
+            leave=leave,
+            postfix=postfix
+        )
+    
+    @staticmethod
+    def starmap(pool: Pool, call: callable, args: Iterable[Tuple[Any]], description: str = "", total: Optional[int] = None, leave: Optional[bool] = True, postfix: Optional[dict] = None) -> List[Any]:
         try:
             total = len(args)
         except:
