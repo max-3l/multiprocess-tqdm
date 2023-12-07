@@ -6,7 +6,6 @@ from threading import Thread
 from typing import Any, Iterable, List, Optional, Tuple, Union
 
 from tqdm import tqdm
-from tqdm.contrib.logging import logging_redirect_tqdm
 
 
 class Message:
@@ -58,8 +57,8 @@ def override_logging_stream_handler(queue: Queue, logger: Optional[Iterable[logg
     original_handler = [[handler for handler in log.handlers] for log in logger]
     try:
         for log in logger:
-            filtered_handlers = list(filter(lambda handler: not isinstance(handler, logging.StreamHandler), log.handlers))
-            removed_handler = next(filter(lambda handler: isinstance(handler, logging.StreamHandler), log.handlers))
+            filtered_handlers = list(filter(lambda handler: type(handler) != logging.StreamHandler, log.handlers))
+            removed_handler = next(filter(lambda handler: type(handler) == logging.StreamHandler, log.handlers))
             new_handler = MPLoggingHandler(queue)
             new_handler.setFormatter(removed_handler.formatter)
             new_handler.setLevel(removed_handler.level)
@@ -141,8 +140,7 @@ class MPtqdm:
             pass
         manager = MPtqdm(description=description, total=total, postfix=postfix, leave=leave)
         with manager as pbar:
-            with logging_redirect_tqdm():
-                return pool.starmap(pbar.run_and_update, zip(repeat(call), args))
+            return pool.starmap(pbar.run_and_update, zip(repeat(call), args))
 
     def run(self):
         bar = tqdm(desc=self.description, total=self.total, leave=self.leave, postfix=self.postfix)
