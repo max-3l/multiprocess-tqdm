@@ -60,7 +60,7 @@ def override_logging_stream_handler(queue: Queue, logger: Optional[Iterable[logg
             filtered_handlers = list(filter(lambda handler: type(handler) != logging.StreamHandler, log.handlers))
             try:
                 removed_handler = next(filter(lambda handler: type(handler) == logging.StreamHandler, log.handlers))
-            except RuntimeError:
+            except StopIteration:
                 continue
             new_handler = MPLoggingHandler(queue)
             new_handler.setFormatter(removed_handler.formatter)
